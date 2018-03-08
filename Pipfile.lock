@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "7ff5eee9e957dcb55911282a8c00437e3d595ae9013f9259a4d0a5c394dee4ba"
+            "sha256": "bc72a2e989de36e495f00ba5c557380d268783159daa211fe946cde70eeb6a88"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -179,6 +179,10 @@
             ],
             "markers": "python_version == '2.7'",
             "version": "==3.5.0"
+        },
+        "e1839a8": {
+            "editable": true,
+            "path": "."
         },
         "enum34": {
             "hashes": [
