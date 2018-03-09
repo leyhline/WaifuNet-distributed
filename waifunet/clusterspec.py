@@ -19,12 +19,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import random
 import os
 import re
+import json
+import subprocess
 from typing import List, Dict
 from os import PathLike
 ClusterSpec = Dict[str, List[str]]
 
 
 class ClusterSpecParser:
+    TIMEOUT_EXTERNAL = 10  # seconds
+
     """
     Class for holding cluster specification for distributed TensorFlow training.
     Each server needs the same specification, passed as a dict.
@@ -44,7 +48,11 @@ class ClusterSpecParser:
         return self.spec
 
     def to_json(self) -> str:
-        raise NotImplementedError()
+        return json.dumps(self.spec)
+
+    def save_json(self, path: PathLike):
+        with open(path, "w") as fd:
+            json.dump(self.spec, fd)
 
     def parse_textfile(self, path: PathLike):
         """
@@ -61,3 +69,11 @@ class ClusterSpecParser:
         ps = sampled[:self.max_ps]
         workers = sampled[self.max_ps:]
         self.spec = {"ps": ps, "worker": workers}
+
+    def parse_external(self, args: List[str]):
+        """
+        Parse output from external command. Hostnames are separated by newlines.
+        """
+        completed = subprocess.run(args, timeout=self.TIMEOUT_EXTERNAL, stdout=subprocess.PIPE)
+        hostnames = completed.stdout.decode().splitlines()
+        self.parse_list(hostnames)

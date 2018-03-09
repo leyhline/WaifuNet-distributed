@@ -16,8 +16,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+import os
 from os import path
 import unittest
+import json
 import waifunet.clusterspec as spec
 
 
@@ -25,13 +27,30 @@ this_directory_path = path.abspath(path.dirname(__file__))
 sane_input_file = "list_hostnames_result.txt"
 
 
-class TextfileToDict(unittest.TestCase):
+class ParseTextfile(unittest.TestCase):
     def setUp(self):
         self.parser = spec.ClusterSpecParser()
-    
-    def test_on_sane_input(self):
         self.parser.parse_textfile(path.join(this_directory_path, sane_input_file))
+    
+    def test_to_dict(self):
         result = self.parser.to_dict()
+        self._check_parsed_textfile(result)
+
+    def test_to_json(self):
+        result = self.parser.to_json()
+        result_as_dict = json.loads(result)
+        self._check_parsed_textfile(result_as_dict)
+
+    def test_write_json_to_file(self):
+        filename = "list_hostnames_result.json"
+        filepath = path.join(this_directory_path, filename)
+        self.parser.save_json(filepath)
+        with open(filepath, "r") as fd:
+            result = json.load(fd)
+        os.remove(filepath)
+        self._check_parsed_textfile(result)
+
+    def _check_parsed_textfile(self, result):
         self.assertEqual(len(result), 2)
         self.assertTrue("ps" in result)
         self.assertTrue("worker" in result)
@@ -41,7 +60,7 @@ class TextfileToDict(unittest.TestCase):
         self._check_for_tfpool_in_names(ps)
         self.assertEqual(len(workers), 16)
         self._check_for_tfpool_in_names(workers)
-    
+
     def _check_for_tfpool_in_names(self, hostnames):
         for name in hostnames:
             self.assertEqual(name[:6], "tfpool")
@@ -60,3 +79,14 @@ class ConstructorTest(unittest.TestCase):
     def test_not_enough_workers(self):
         with self.assertRaises(AssertionError):
             spec.ClusterSpecParser(max_workers=0)
+
+
+class ParseExternalCommand(unittest.TestCase):
+    def setUp(self):
+        self.parser = spec.ClusterSpecParser()
+
+    def test_parse_list_hostnames_mock_sh(self):
+        command = [path.join(this_directory_path, "list_hostnames_mock.sh")]
+        self.parser.parse_external(command)
+        result = self.parser.to_dict()
+        self.assertEqual(len(result), 2)
