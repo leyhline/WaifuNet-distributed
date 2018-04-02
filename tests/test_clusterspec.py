@@ -18,75 +18,80 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
 from os import path
-import unittest
+import pytest
 import json
-import waifunet.clusterspec as spec
+from waifunet.clusterspec import ClusterSpecParser
 
 
 this_directory_path = path.abspath(path.dirname(__file__))
 sane_input_file = "list_hostnames_result.txt"
 
 
-class ParseTextfile(unittest.TestCase):
-    def setUp(self):
-        self.parser = spec.ClusterSpecParser()
-        self.parser.parse_textfile(path.join(this_directory_path, sane_input_file))
+class TestParseTextfile:
+    @staticmethod
+    def initialize_parser():
+        parser = ClusterSpecParser()
+        parser.parse_textfile(path.join(this_directory_path, sane_input_file))
+        return parser
     
     def test_to_dict(self):
-        result = self.parser.to_dict()
-        self._check_parsed_textfile(result)
+        parser = self.initialize_parser()
+        result = parser.to_dict()
+        self.check_parsed_textfile(result)
 
     def test_to_json(self):
-        result = self.parser.to_json()
+        parser = self.initialize_parser()
+        result = parser.to_json()
         result_as_dict = json.loads(result)
-        self._check_parsed_textfile(result_as_dict)
+        self.check_parsed_textfile(result_as_dict)
 
     def test_write_json_to_file(self):
         filename = "list_hostnames_result.json"
         filepath = path.join(this_directory_path, filename)
-        self.parser.save_json(filepath)
+        parser = self.initialize_parser()
+        parser.save_json(filepath)
         with open(filepath, "r") as fd:
             result = json.load(fd)
         os.remove(filepath)
-        self._check_parsed_textfile(result)
+        self.check_parsed_textfile(result)
 
-    def _check_parsed_textfile(self, result):
-        self.assertEqual(len(result), 2)
-        self.assertTrue("ps" in result)
-        self.assertTrue("worker" in result)
+    @staticmethod
+    def check_parsed_textfile(result):
+        assert len(result) == 2
+        assert "ps" in result
+        assert "worker" in result
         ps = result["ps"]
         workers = result["worker"]
-        self.assertEqual(len(ps), 1)
-        self._check_for_tfpool_in_names(ps)
-        self.assertEqual(len(workers), 16)
-        self._check_for_tfpool_in_names(workers)
+        assert len(ps) == 1
+        TestParseTextfile.check_for_tfpool_in_names(ps)
+        assert len(workers) == 16
+        TestParseTextfile.check_for_tfpool_in_names(workers)
 
-    def _check_for_tfpool_in_names(self, hostnames):
+    @staticmethod
+    def check_for_tfpool_in_names(hostnames):
         for name in hostnames:
-            self.assertEqual(name[:6], "tfpool")
+            assert name[:6] == "tfpool"
 
 
-class ConstructorTest(unittest.TestCase):
+class TestConstructor:
     def test_sane_input(self):
-        parser = spec.ClusterSpecParser(max_ps=1, max_workers=1)
-        self.assertEqual(parser.max_ps, 1)
-        self.assertEqual(parser.max_workers, 1)
+        parser = ClusterSpecParser(max_ps=1, max_workers=1)
+        assert parser.max_ps == 1
+        assert parser.max_workers == 1
     
     def test_not_enough_ps(self):
-        with self.assertRaises(AssertionError):
-            spec.ClusterSpecParser(max_ps=0)
+        with pytest.raises(AssertionError):
+            ClusterSpecParser(max_ps=0)
 
     def test_not_enough_workers(self):
-        with self.assertRaises(AssertionError):
-            spec.ClusterSpecParser(max_workers=0)
+        with pytest.raises(AssertionError):
+            ClusterSpecParser(max_workers=0)
 
 
-class ParseExternalCommand(unittest.TestCase):
-    def setUp(self):
-        self.parser = spec.ClusterSpecParser()
-
+class TestParseExternalCommand:
     def test_parse_list_hostnames_mock_sh(self):
         command = [path.join(this_directory_path, "list_hostnames_mock.sh")]
-        self.parser.parse_external(command)
-        result = self.parser.to_dict()
-        self.assertEqual(len(result), 2)
+        parser = ClusterSpecParser()
+        parser.parse_external(command)
+        result = parser.to_dict()
+        TestParseTextfile.check_parsed_textfile(result)
